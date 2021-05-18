@@ -13,7 +13,8 @@ chia_location, log_directory, config_jobs, manager_check_interval, max_concurren
     minimum_minutes_between_jobs, progress_settings, notification_settings, debug_level, view_settings, \
     instrumentation_settings = get_config_info()
 try:
-    logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=debug_level)
+    logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
+                        level=debug_level)
 
     logging.info(f'Debug Level: {debug_level}')
     logging.info(f'Chia Location: {chia_location}')
@@ -24,6 +25,7 @@ try:
     logging.info(f'Progress Settings: {progress_settings}')
     logging.info(f'Notification Settings: {notification_settings}')
     logging.info(f'View Settings: {view_settings}')
+    logging.info(f'Instrumentation Settings: {instrumentation_settings}')
 
 logging.info(f'Debug Level: {debug_level}')
 logging.info(f'Chia Location: {chia_location}')
@@ -44,8 +46,13 @@ logging.info(f'Instrumentation Settings: {instrumentation_settings}')
     next_job_work = {}
     running_work = {}
 
+    logging.info(f'Grabbing system drives.')
+    system_drives = get_system_drives()
+    logging.info(f"Found System Drives: {system_drives}")
+
     logging.info(f'Grabbing running plots.')
-    jobs, running_work = get_running_plots(jobs, running_work)
+    jobs, running_work = get_running_plots(jobs=jobs, running_work=running_work,
+                                           instrumentation_settings=instrumentation_settings)
     for job in jobs:
         max_date = None
         for pid in job.running_work:
@@ -53,14 +60,27 @@ logging.info(f'Instrumentation Settings: {instrumentation_settings}')
             start = work.datetime_start
             if not max_date or start > max_date:
                 max_date = start
+        initial_delay_date = datetime.now() + timedelta(minutes=job.initial_delay_minutes)
+        if job.initial_delay_minutes:
+            next_job_work[job.name] = initial_delay_date
         if not max_date:
             continue
-        next_job_work[job.name] = max_date + timedelta(minutes=job.stagger_minutes)
+        max_date = max_date + timedelta(minutes=job.stagger_minutes)
+        if job.initial_delay_minutes and initial_delay_date > max_date:
+            logging.info(f'{job.name} Found. Setting initial dalay date to {next_job_work[job.name]} which is '
+                         f'{job.initial_delay_minutes} minutes.')
+            continue
+        next_job_work[job.name] = max_date
         logging.info(f'{job.name} Found. Setting next stagger date to {next_job_work[job.name]}')
 
-logging.info(f'Grabbing system drives.')
-system_drives = get_system_drives()
-logging.info(f"Found System Drives: {system_drives}")
+    logging.info(f'Starting loop.')
+    while has_active_jobs_and_work(jobs):
+        # CHECK LOGS FOR DELETED WORK
+        logging.info(f'Checking log progress..')
+        check_log_progress(jobs=jobs, running_work=running_work, progress_settings=progress_settings,
+                           notification_settings=notification_settings, view_settings=view_settings,
+                           instrumentation_settings=instrumentation_settings)
+        next_log_check = datetime.now() + timedelta(seconds=manager_check_interval)
 
 logging.info(f'Grabbing running plots.')
 jobs, running_work = get_running_plots(jobs=jobs, running_work=running_work,
@@ -128,6 +148,13 @@ while has_active_jobs_and_work(jobs):
         logging.info(f'Sleeping for {manager_check_interval} seconds.')
         time.sleep(manager_check_interval)
 
+    logging.info(f'Manager has exited loop because there are no more active jobs.')
+    send_notifications(
+        title='Stateless Manager.py Exit. No more active jobs',
+        body=f'Manager has exited loop because there are no more active jobs.',
+        settings=notification_settings,
+    )
+
 except Exception as e:
     logging.info(f'Stateless-manager.py error:')
     logging.info(f'{e}')
@@ -138,7 +165,6 @@ except Exception as e:
     )
     print("Stopped stateless-manager")
 
-    logging.info(f'Sleeping for {manager_check_interval} seconds.')
-    time.sleep(manager_check_interval)
 
-logging.info(f'Manager has exited loop because there are no more active jobs.')
+
+
