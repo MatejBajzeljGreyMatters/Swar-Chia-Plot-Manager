@@ -7,13 +7,23 @@ from plotmanager.library.parse.configuration import get_config_info
 from plotmanager.library.utilities.jobs import has_active_jobs_and_work, load_jobs, monitor_jobs_to_start
 from plotmanager.library.utilities.log import check_log_progress
 from plotmanager.library.utilities.processes import get_running_plots, get_system_drives
-
+from plotmanager.library.utilities.notifications import send_notifications
 
 chia_location, log_directory, config_jobs, manager_check_interval, max_concurrent, max_for_phase_1, \
     minimum_minutes_between_jobs, progress_settings, notification_settings, debug_level, view_settings, \
     instrumentation_settings = get_config_info()
+try:
+    logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=debug_level)
 
-logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=debug_level)
+    logging.info(f'Debug Level: {debug_level}')
+    logging.info(f'Chia Location: {chia_location}')
+    logging.info(f'Log Directory: {log_directory}')
+    logging.info(f'Jobs: {config_jobs}')
+    logging.info(f'Manager Check Interval: {manager_check_interval}')
+    logging.info(f'Max Concurrent: {max_concurrent}')
+    logging.info(f'Progress Settings: {progress_settings}')
+    logging.info(f'Notification Settings: {notification_settings}')
+    logging.info(f'View Settings: {view_settings}')
 
 logging.info(f'Debug Level: {debug_level}')
 logging.info(f'Chia Location: {chia_location}')
@@ -27,13 +37,26 @@ logging.info(f'Progress Settings: {progress_settings}')
 logging.info(f'Notification Settings: {notification_settings}')
 logging.info(f'View Settings: {view_settings}')
 logging.info(f'Instrumentation Settings: {instrumentation_settings}')
+    logging.info(f'Loading jobs into objects.')
+    jobs = load_jobs(config_jobs)
 
-logging.info(f'Loading jobs into objects.')
-jobs = load_jobs(config_jobs)
+    next_log_check = datetime.now()
+    next_job_work = {}
+    running_work = {}
 
-next_log_check = datetime.now()
-next_job_work = {}
-running_work = {}
+    logging.info(f'Grabbing running plots.')
+    jobs, running_work = get_running_plots(jobs, running_work)
+    for job in jobs:
+        max_date = None
+        for pid in job.running_work:
+            work = running_work[pid]
+            start = work.datetime_start
+            if not max_date or start > max_date:
+                max_date = start
+        if not max_date:
+            continue
+        next_job_work[job.name] = max_date + timedelta(minutes=job.stagger_minutes)
+        logging.info(f'{job.name} Found. Setting next stagger date to {next_job_work[job.name]}')
 
 logging.info(f'Grabbing system drives.')
 system_drives = get_system_drives()
@@ -102,7 +125,18 @@ while has_active_jobs_and_work(jobs):
         next_log_check=next_log_check,
         minimum_minutes_between_jobs=minimum_minutes_between_jobs,
         system_drives=system_drives,
+        logging.info(f'Sleeping for {manager_check_interval} seconds.')
+        time.sleep(manager_check_interval)
+
+except Exception as e:
+    logging.info(f'Stateless-manager.py error:')
+    logging.info(f'{e}')
+    send_notifications(
+        title='Stateless Manager.py crash',
+        body=f'Stateless Manager error: {e}!',
+        settings=notification_settings,
     )
+    print("Stopped stateless-manager")
 
     logging.info(f'Sleeping for {manager_check_interval} seconds.')
     time.sleep(manager_check_interval)

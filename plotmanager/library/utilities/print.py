@@ -194,7 +194,7 @@ def print_view(jobs, running_work, analysis, drives, next_log_check, view_settin
     if view_settings.get('include_drive_info'):
         drive_data = get_drive_data(drives, running_work, job_data)
 
-    manager_processes = get_manager_processes()
+        manager_processes = get_manager_processes()
 
     if os.name == 'nt':
         os.system('cls')
@@ -204,18 +204,14 @@ def print_view(jobs, running_work, analysis, drives, next_log_check, view_settin
     print(f'Manager Status: {"Running" if manager_processes else "Stopped"}')
     print()
 
-    if view_settings.get('include_drive_info'):
-        print(drive_data)
-    if view_settings.get('include_cpu'):
-        print(f'CPU Usage: {psutil.cpu_percent()}%')
-    if view_settings.get('include_ram'):
-        ram_usage = psutil.virtual_memory()
-        print(f'RAM Usage: {pretty_print_bytes(ram_usage.used, "gb")}/{pretty_print_bytes(ram_usage.total, "gb", 2, "GiB")}'
-              f'({ram_usage.percent}%)')
-    print()
-    if view_settings.get('include_plot_stats'):
-        print(f'Plots Completed Yesterday: {analysis["summary"].get(datetime.now().date() - timedelta(days=1), 0)}')
-        print(f'Plots Completed Today: {analysis["summary"].get(datetime.now().date(), 0)}')
+        if view_settings.get('include_drive_info'):
+            print(drive_data)
+        if view_settings.get('include_cpu'):
+            print(f'CPU Usage: {psutil.cpu_percent()}%')
+        if view_settings.get('include_ram'):
+            ram_usage = psutil.virtual_memory()
+            print(f'RAM Usage: {pretty_print_bytes(ram_usage.used, "gb")}/{pretty_print_bytes(ram_usage.total, "gb", 2, "GiB")}'
+                f'({ram_usage.percent}%)')
         print()
     if loop:
         print(f"Next log check at {next_log_check.strftime('%Y-%m-%d %H:%M:%S')}")
