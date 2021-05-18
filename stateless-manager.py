@@ -1,5 +1,6 @@
 import logging
 import time
+import socket
 
 from datetime import datetime, timedelta
 
@@ -156,11 +157,11 @@ while has_active_jobs_and_work(jobs):
     )
 
 except Exception as e:
-    logging.info(f'Stateless-manager.py error:')
+    logging.info(f'Stateless-manager.py error on {socket.gethostname()}:')
     logging.info(f'{e}')
     send_notifications(
         title='Stateless Manager.py crash',
-        body=f'Stateless Manager error: {e}!',
+        body=f'Stateless Manager error on {socket.gethostname()}: {e}!',
         settings=notification_settings,
     )
     print("Stopped stateless-manager")
