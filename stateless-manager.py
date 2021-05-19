@@ -152,7 +152,7 @@ while has_active_jobs_and_work(jobs):
     logging.info(f'Manager has exited loop because there are no more active jobs.')
     send_notifications(
         title='Stateless Manager.py Exit. No more active jobs',
-        body=f'Manager has exited loop because there are no more active jobs.',
+        body=f'Manager has exited loop on {socker.gethostname()} because there are no more active jobs.',
         settings=notification_settings,
     )
 
