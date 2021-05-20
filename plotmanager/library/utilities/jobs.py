@@ -13,8 +13,12 @@ from plotmanager.library.utilities.log import get_log_file_name
 
 def has_active_jobs_and_work(jobs):
     for job in jobs:
+        logging.info(f'total_kicked_off: {job.total_kicked_off}, Max jobs: {job.max_plots} ')
         if job.total_kicked_off < job.max_plots:
+            logging.info('active jobs exists')
             return True
+
+    logging.info('active jobs DOES NOT exists')
     return False
 
 
@@ -336,6 +340,7 @@ def start_work(job, chia_location, log_directory, drives_free_space):
     job.total_kicked_off += 1
     job.running_work = job.running_work + [pid]
     logging.info(f'Job total running: {job.total_running}')
+    logging.info(f'Job total total_kicked_off: {job.total_kicked_off}')
     logging.info(f'Job running: {job.running_work}')
 
     return job, work

@@ -18,6 +18,11 @@ try:
     logging.basicConfig(format='%(asctime)s [%(levelname)s]: %(message)s', datefmt='%Y-%m-%d %H:%M:%S',
                         level=debug_level)
 
+    send_notifications(
+        title='Stateless Manager Started',
+        body=f'Stateless Manager has Started on {socket.gethostname()}',
+        settings=notification_settings,
+    )
     logging.info(f'Debug Level: {debug_level}')
     logging.info(f'Chia Location: {chia_location}')
     logging.info(f'Log Directory: {log_directory}')
@@ -126,7 +131,4 @@ except Exception as e:
         settings=notification_settings,
     )
     print("Stopped stateless-manager")
-
-
-
 
