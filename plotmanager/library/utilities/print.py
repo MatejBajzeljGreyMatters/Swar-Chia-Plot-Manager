@@ -212,6 +212,11 @@ def print_view(jobs, running_work, analysis, drives, next_log_check, view_settin
         ram_usage = psutil.virtual_memory()
         print(f'RAM Usage: {pretty_print_bytes(ram_usage.used, "gb")}/{pretty_print_bytes(ram_usage.total, "gb", 2, "GiB")}')
         print(f'({ram_usage.percent}%)')
+        print()
+    if view_settings.get('include_plot_stats'):
+        print(f'Plots Completed Yesterday: {analysis["summary"].get(datetime.now().date() - timedelta(days=1), 0)}')
+        print(f'Plots Completed Today: {analysis["summary"].get(datetime.now().date(), 0)}')
+        print()
 
     print()
     if loop:
